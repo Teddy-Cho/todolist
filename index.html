@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Todo List</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel for JSX compilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React Code with Babel -->
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [todos, setTodos] = useState([]);
+      const [inputValue, setInputValue] = useState('');
+
+      const addTodo = () => {
+        if (inputValue.trim() === '') return;
+        const newTodo = { id: Date.now(), text: inputValue };
+        setTodos([...todos, newTodo]);
+        setInputValue('');
+      };
+
+      const deleteTodo = (id) => {
+        setTodos(todos.filter(todo => todo.id !== id));
+      };
+
+      const handleKeyPress = (e) => {
+        if (e.key === 'Enter') addTodo();
+      };
+
+      return (
+        <div className="container">
+          <h1>My ToDo</h1>
+          <div className="input-group">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="할 일을 입력하세요..."
+            />
+            <button className="add-btn" onClick={addTodo}>추가</button>
+          </div>
+          <ul className="todo-list">
+            {todos.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                목록이 비어 있습니다.
+              </p>
+            ) : (
+              todos.map(todo => (
+                <li key={todo.id} className="todo-item">
+                  <span className="todo-text">{todo.text}</span>
+                  <button className="delete-btn" onClick={() => deleteTodo(todo.id)}>삭제</button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
