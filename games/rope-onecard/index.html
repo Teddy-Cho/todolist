@@ -164,7 +164,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="rule"><div class="ic red">2 A</div><div><b>공격!</b> 2는 +2장, A는 +3장, <b>♠A는 +4장.</b> 상대는 2나 A를 내서 막고 공격을 넘기거나, 쌓인 만큼 카드를 가져가요.</div></div>
       <div class="rule"><div class="ic">♣ 7</div><div><b>모양 바꾸기.</b> 다음에 낼 모양을 내 맘대로 정해요.</div></div>
       <div class="rule"><div class="ic red">J K</div><div><b>한 번 더!</b> J나 K를 내면 내 차례가 한 번 더 와요.</div></div>
-      <div class="rule"><div class="ic">🪢</div><div><b>줄넘기 대결!</b> 아무 때나 낼 수 있어요. 기본 줄넘기, ⚡번개, 🔴빨간 줄 조심, 🌀2단 뛰기, 💨쌩쌩이 중 하나가 랜덤으로 나와요. 먼저 걸린 사람이 2장 가져가고, <b>이긴 사람이 먼저</b> 카드를 내요. 공격받을 때 내면 쌓인 공격이 대결 벌칙이 돼요.</div></div>
+      <div class="rule"><div class="ic">🪢</div><div><b>줄넘기 대결! (10장)</b> 아무 때나 낼 수 있어요. 기본 줄넘기, ⚡번개, 🔴빨간 줄 조심, 🌀2단 뛰기, 💨쌩쌩이 중 하나가 랜덤으로 나와요. 먼저 걸린 사람이 2장 가져가고, <b>이긴 사람이 먼저</b> 카드를 내요. 공격받을 때 내면 쌓인 공격이 대결 벌칙이 돼요.</div></div>
       <div class="rule"><div class="ic">7 7 7</div><div><b>훌라 콤보.</b> 같은 숫자 3장, 또는 같은 모양으로 이어진 숫자 3장(예: ♥3 ♥4 ♥5)은 바닥과 상관없이 한꺼번에 낼 수 있어요. (공격받을 때는 안 돼요)</div></div>
       <div class="rule"><div class="ic">1장!</div><div><b>원카드!</b> 카드가 1장 남으면 버튼이 떠요. 내가 먼저 누르면 성공, 상대가 먼저 누르면 1장 벌칙!</div></div>
     </div>
@@ -211,7 +211,7 @@ let uid=0;
 function newDeck(){
   const d=[];
   for(const s of 'SHDC')for(let r=1;r<=13;r++)d.push({s,r,id:++uid});
-  d.push({s:'R',r:0,id:++uid},{s:'R',r:0,id:++uid});
+  for(let i=0;i<10;i++)d.push({s:'R',r:0,id:++uid}); // 줄넘기 카드 10장
   for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}
   return d;
 }
