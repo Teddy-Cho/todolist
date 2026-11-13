@@ -827,7 +827,7 @@ function loop() {
     } else if (phase === 'play' && game.countUp) {
       text(`⏱ ${game.elapsed.toFixed(1)}초`, W / 2, 80, 40, '#fff');
     }
-    if (touchMode()) text('👆 내 쪽 화면을 톡톡!', W / 2, H - 16 - (game.id === 'freeze' ? 50 : 0) - (game.id === 'race' ? Math.max(150, H * .3) : 0), 22, 'rgba(255,255,255,.9)');
+    if (touchMode()) text('👆 내 쪽 화면을 톡톡!', W / 2, H - 16 - (game.id === 'freeze' ? 80 : 0) - (game.id === 'race' ? Math.max(150, H * .3) : 0), 22, 'rgba(255,255,255,.9)');
   } else if (phase === 'menu') {
     menuStatusTick(t);
   }
