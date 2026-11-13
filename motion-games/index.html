@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="모션 게임">
+<meta name="theme-color" content="#1b1e3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>우리집 모션 게임</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,6 +55,8 @@ h1 span{display:inline-block;animation:bob 1.6s ease-in-out infinite}
 .btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
 .btn.ghost{background:#ece6d8}
 .status{text-align:center;margin-top:14px;font-size:18px;color:#6a6f8f;min-height:1.4em}
+#install{margin-top:14px;background:#e6f3ff;border:3px dashed var(--p1);border-radius:16px;padding:12px 16px;font-size:17px;color:#2c4a6e;line-height:1.5;text-align:center}
+#install .btn{margin-top:8px;font-size:20px}
 .tip{margin-top:16px;background:#f3eddd;border-radius:16px;padding:12px 16px;font-size:16px;color:#5b5f7c;line-height:1.5}
 #quit{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:5;
   font:inherit;font-size:18px;border:none;border-radius:999px;padding:8px 16px;background:rgba(0,0,0,.45);color:#fff;cursor:pointer}
@@ -96,6 +104,8 @@ h1 span{display:inline-block;animation:bob 1.6s ease-in-out infinite}
       <button class="btn" id="camBtn">📷 카메라 켜고 자리 확인하기</button>
     </div>
     <div class="status" id="status"></div>
+
+    <div id="install" class="hidden"></div>
 
     <div class="tip">
       💡 아이패드를 <b>가로</b>로 세워 두고 <b>2~3걸음</b> 뒤로 가서 나란히 서세요. 화면 <b>왼쪽</b>에 서는 사람이 파란색, <b>오른쪽</b>이 주황색이에요.
@@ -885,6 +895,40 @@ $('#againBtn').addEventListener('click', () => startGame(game));
 $('#menuBtn').addEventListener('click', toMenu);
 $('#quit').addEventListener('click', toMenu);
 updateCamBtn();
+
+// ---------------------------------------------------------------------------
+// 앱 설치 (홈 화면에 추가)
+// ---------------------------------------------------------------------------
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
+}
+const isStandalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let deferredPrompt = null;
+function showInstall() {
+  const el = $('#install');
+  if (isStandalone || store.get('installHidden', '') === '1') { el.classList.add('hidden'); return; }
+  el.innerHTML = '';
+  const close = document.createElement('button');
+  close.textContent = '✕'; close.setAttribute('aria-label', '닫기');
+  close.style.cssText = 'float:right;border:none;background:none;font:inherit;font-size:20px;color:#2c4a6e;cursor:pointer';
+  close.onclick = () => { store.set('installHidden', '1'); el.classList.add('hidden'); };
+  el.appendChild(close);
+  const msg = document.createElement('div');
+  if (deferredPrompt) {
+    msg.textContent = '📲 앱으로 설치하면 홈 화면에서 바로 열 수 있어요!';
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = '앱 설치하기';
+    b.onclick = async () => { deferredPrompt.prompt(); await deferredPrompt.userChoice.catch(() => {}); deferredPrompt = null; el.classList.add('hidden'); };
+    el.append(msg, b);
+  } else if (isIOS) {
+    msg.innerHTML = '📲 <b>앱으로 설치하기</b>: 사파리 위쪽의 <b>공유 버튼 (□↑)</b>을 누르고 → <b>"홈 화면에 추가"</b>를 고르세요.<br>홈 화면의 🤸 아이콘으로 전체 화면으로 바로 시작할 수 있어요.';
+    el.appendChild(msg);
+  } else return;
+  el.classList.remove('hidden');
+}
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; showInstall(); });
+addEventListener('appinstalled', () => $('#install').classList.add('hidden'));
+showInstall();
 
 // 테스트용 훅 (개발자 도구에서 사용)
 window.__mg = { players, processPoses, startCamera, get phase() { return phase; }, get game() { return game; } };
