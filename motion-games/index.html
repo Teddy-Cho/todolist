@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="모션 게임">
+<meta name="theme-color" content="#1b1e3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<title>우리집 모션 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --p1:#3d9bff; --p2:#ff8a3d;
+  --ink:#1f2340; --paper:#fffaf0; --accent:#ffcf3d; --good:#2ecc71; --bad:#ff4d6d;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{height:100%;overflow:hidden;background:#1b1e3a;color:var(--ink);
+  font-family:'Jua',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;touch-action:manipulation}
+#video{position:fixed;opacity:0;pointer-events:none;width:2px;height:2px;left:0;top:0}
+#cv{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow:auto}
+.hidden{display:none!important}
+.panel{background:rgba(255,250,240,.94);border-radius:28px;padding:24px 28px;max-width:1000px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto}
+h1{font-size:clamp(30px,5vw,48px);text-align:center;letter-spacing:-1px}
+h1 span{display:inline-block;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px) rotate(-6deg)}}
+.sub{text-align:center;color:#6a6f8f;font-size:18px;margin-top:4px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:18px}
+.who{display:flex;align-items:center;gap:10px;background:#fff;border-radius:18px;padding:8px 14px;border:4px solid var(--c);min-width:0}
+.who .dot{width:22px;height:22px;border-radius:50%;background:var(--c);flex:none}
+.who input{font:inherit;font-size:22px;border:none;outline:none;width:7em;max-width:40vw;background:transparent;color:var(--ink)}
+.who .seen{font-size:16px;color:#888;white-space:nowrap}
+.seg{display:flex;background:#ece6d8;border-radius:16px;padding:4px}
+.seg button{font:inherit;font-size:18px;border:none;background:transparent;padding:8px 14px;border-radius:12px;color:#555;cursor:pointer}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.lbl{font-size:18px;color:#6a6f8f}
+.games{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
+@media (max-width:820px){.games{grid-template-columns:repeat(2,1fr)}}
+.card{font:inherit;border:none;cursor:pointer;border-radius:22px;padding:18px 10px 16px;color:#fff;text-align:center;
+  box-shadow:0 6px 0 rgba(0,0,0,.18);transition:transform .1s}
+.card:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.card .em{font-size:56px;line-height:1.1;display:block}
+.card .t{font-size:28px;display:block;margin-top:6px}
+.card .d{font-size:16px;opacity:.92;display:block;margin-top:4px}
+.btn{font:inherit;font-size:22px;border:none;border-radius:18px;padding:12px 22px;cursor:pointer;background:var(--accent);color:var(--ink);box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.btn.ghost{background:#ece6d8}
+.status{text-align:center;margin-top:14px;font-size:18px;color:#6a6f8f;min-height:1.4em}
+#install{margin-top:14px;background:#e6f3ff;border:3px dashed var(--p1);border-radius:16px;padding:12px 16px;font-size:17px;color:#2c4a6e;line-height:1.5;text-align:center}
+#install .btn{margin-top:8px;font-size:20px}
+.tip{margin-top:16px;background:#f3eddd;border-radius:16px;padding:12px 16px;font-size:16px;color:#5b5f7c;line-height:1.5}
+#quit{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:5;
+  font:inherit;font-size:18px;border:none;border-radius:999px;padding:8px 16px;background:rgba(0,0,0,.45);color:#fff;cursor:pointer}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:rgba(27,30,58,.85);color:#fff;font-size:26px;z-index:20;text-align:center;padding:16px}
+.spin{width:64px;height:64px;border-radius:50%;border:8px solid rgba(255,255,255,.2);border-top-color:var(--accent);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.res-title{font-size:clamp(34px,6vw,60px);text-align:center}
+.res-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.res-card{border-radius:22px;padding:18px;text-align:center;color:#fff;position:relative}
+.res-card .n{font-size:30px}
+.res-card .s{font-size:clamp(44px,8vw,72px);line-height:1.1}
+.res-card .x{font-size:18px;opacity:.95}
+.res-card .crown{position:absolute;top:-30px;left:50%;transform:translateX(-50%);font-size:52px;animation:bob 1.2s ease-in-out infinite}
+</style>
+</head>
+<body>
+<video id="video" playsinline muted autoplay></video>
+<canvas id="cv"></canvas>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <h1><span>🤸</span> 우리집 모션 게임 <span>🎮</span></h1>
+    <p class="sub">아이패드 카메라 앞에서 몸으로 하는 2인용 게임</p>
+
+    <div class="row">
+      <label class="who" style="--c:var(--p1)"><span class="dot"></span><input id="n1" maxlength="8" value="아빠" aria-label="왼쪽 플레이어 이름"><span class="seen" id="seen1">왼쪽</span></label>
+      <label class="who" style="--c:var(--p2)"><span class="dot"></span><input id="n2" maxlength="8" value="아들" aria-label="오른쪽 플레이어 이름"><span class="seen" id="seen2">오른쪽</span></label>
+    </div>
+
+    <div class="row">
+      <span class="lbl">인식 감도</span>
+      <div class="seg" id="sens">
+        <button data-v="easy">쉬움</button><button data-v="normal">보통</button><button data-v="hard">어려움</button>
+      </div>
+      <span class="lbl">조작</span>
+      <div class="seg" id="mode">
+        <button data-v="cam">📷 카메라</button><button data-v="touch">👆 터치</button>
+      </div>
+    </div>
+
+    <div class="games" id="games"></div>
+
+    <div class="row">
+      <button class="btn" id="camBtn">📷 카메라 켜고 자리 확인하기</button>
+    </div>
+    <div class="status" id="status"></div>
+
+    <div id="install" class="hidden"></div>
+
+    <div class="tip">
+      💡 아이패드를 <b>가로</b>로 세워 두고 <b>2~3걸음</b> 뒤로 가서 나란히 서세요. 화면 <b>왼쪽</b>에 서는 사람이 파란색, <b>오른쪽</b>이 주황색이에요.
+      머리부터 무릎까지 보이면 가장 잘 돼요. 잘 안 잡히면 감도를 <b>쉬움</b>으로 바꿔 보세요.
+    </div>
+  </div>
+</div>
+
+<div id="result" class="screen hidden">
+  <div class="panel">
+    <div class="res-title" id="resTitle"></div>
+    <div class="res-cards" id="resCards"></div>
+    <div class="row" style="margin-top:24px">
+      <button class="btn" id="againBtn">🔁 한 판 더!</button>
+      <button class="btn ghost" id="menuBtn">🏠 다른 게임</button>
+    </div>
+  </div>
+</div>
+
+<button id="quit" class="hidden">✕ 그만하기</button>
+<div id="loading" class="hidden"><div class="spin"></div><div id="loadingText">불러오는 중...</div></div>
+
+<script type="module">
+// ---------------------------------------------------------------------------
+// 설정
+// ---------------------------------------------------------------------------
+const MP_VER = '0.10.14';
+const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`;
+const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`;
+const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
+// jump: 몸이 올라가야 하는 높이(몸통 길이 대비), move: '얼음'에서 허용되는 움직임
+const SENS = {
+  easy:   { jump: 0.07, knee: 0.12, move: 0.95 },
+  normal: { jump: 0.11, knee: 0.17, move: 0.65 },
+  hard:   { jump: 0.16, knee: 0.24, move: 0.45 },
+};
+
+const $ = s => document.querySelector(s);
+const video = $('#video'), cv = $('#cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('mg_' + k); return v == null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('mg_' + k, v); } catch {} },
+};
+const settings = { sens: store.get('sens', 'normal'), mode: store.get('mode', 'cam') };
+const sens = () => SENS[settings.sens] || SENS.normal;
+const touchMode = () => settings.mode === 'touch';
+
+// ---------------------------------------------------------------------------
+// 소리
+// ---------------------------------------------------------------------------
+let ac = null;
+function audio() {
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch {}
+  return ac;
+}
+function tone(f, d = 0.12, type = 'sine', v = 0.18, slide = 0, delay = 0) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + delay;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  if (slide) o.frequency.linearRampToValueAtTime(Math.max(40, f + slide), t0 + d);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(v, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + d + 0.02);
+}
+const SFX = {
+  good()  { tone(660, .08, 'square', .09); tone(990, .1, 'square', .09, 0, .07); },
+  bad()   { tone(220, .3, 'sawtooth', .1, -120); },
+  pop()   { tone(500 + Math.random() * 300, .09, 'triangle', .2, 500); },
+  gold()  { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .1, 'square', .08, 0, i * .06)); },
+  step(i) { tone(i % 2 ? 300 : 360, .05, 'triangle', .12); },
+  whoosh(){ tone(900, .12, 'sine', .05, -600); },
+  count() { tone(523, .15, 'square', .1); },
+  go()    { tone(1046, .35, 'square', .12); },
+  win()   { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, .16, 'square', .1, 0, i * .12)); },
+  note(f) { tone(f, .18, 'triangle', .12); },
+};
+function say(txt) {
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt);
+    u.lang = 'ko-KR'; u.rate = 1.05; u.pitch = 1.15;
+    speechSynthesis.speak(u);
+  } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// 플레이어 & 동작 인식
+// ---------------------------------------------------------------------------
+function makePlayer(i) {
+  return { i, color: i ? '#ff8a3d' : '#3d9bff', name: i ? '아들' : '아빠',
+    lm: null, seenAt: -9, prevT: 0, torso: null, base: null, rise: 0,
+    air: false, lastAirT: -9, kneeUp: [false, false], lastLeg: 0, kneesSeenAt: -9, bounceUp: false,
+    lastStepT: -9, motion: 0, prevPts: null, hands: [], shake: 0, airFx: 0,
+    score: 0, combo: 0, best: 0, pos: 0, speed: 0, steps: 0, finishT: null, caught: false };
+}
+const players = [makePlayer(0), makePlayer(1)];
+
+let landmarker = null, camReady = false, lastVideoTime = -1;
+const vmap = { ox: 0, oy: 0, dw: 1, dh: 1 };
+function updateVideoMap() {
+  const vw = video.videoWidth || 1280, vh = video.videoHeight || 720;
+  const s = Math.max(W / vw, H / vh);
+  vmap.dw = vw * s; vmap.dh = vh * s; vmap.ox = (W - vmap.dw) / 2; vmap.oy = (H - vmap.dh) / 2;
+}
+// 거울 모드: 화면 왼쪽에 보이는 사람 = 왼쪽 플레이어
+const toX = x => vmap.ox + (1 - x) * vmap.dw;
+const toY = y => vmap.oy + y * vmap.dh;
+
+function processPoses(list, t) {
+  updateVideoMap();
+  const cand = list.map(lms => {
+    const pts = lms.map(l => ({ x: toX(l.x), y: toY(l.y), v: l.visibility ?? 1 }));
+    return { pts, cx: (pts[11].x + pts[12].x) / 2 };
+  }).sort((a, b) => a.cx - b.cx);
+  const assign = [null, null];
+  if (cand.length >= 2) { assign[0] = cand[0]; assign[1] = cand[cand.length - 1]; }
+  else if (cand.length === 1) assign[cand[0].cx < W / 2 ? 0 : 1] = cand[0];
+  players.forEach((p, i) => {
+    if (assign[i]) updatePlayer(p, assign[i].pts, t);
+    else if (t - p.seenAt > 0.6) { p.lm = null; p.prevPts = null; p.hands = []; p.base = null; }
+  });
+}
+
+function updatePlayer(p, pts, t) {
+  const dt = p.prevT ? Math.min(0.2, Math.max(0.001, t - p.prevT)) : 0.033;
+  p.prevT = t; p.lm = pts; p.seenAt = t;
+  const vis = k => pts[k].v > 0.4;
+  const S = sens();
+  const sh = { x: (pts[11].x + pts[12].x) / 2, y: (pts[11].y + pts[12].y) / 2 };
+  const hipsOk = vis(23) && vis(24);
+  const hip = { x: (pts[23].x + pts[24].x) / 2, y: (pts[23].y + pts[24].y) / 2 };
+  let torso = hipsOk ? Math.hypot(hip.x - sh.x, hip.y - sh.y)
+                     : Math.hypot(pts[11].x - pts[12].x, pts[11].y - pts[12].y) * 1.3;
+  torso = Math.max(torso, 20);
+  p.torso = p.torso ? p.torso + (torso - p.torso) * 0.1 : torso;
+
+  // --- 점프: 어깨 높이가 평소 위치보다 올라갔는지
+  const bodyY = sh.y;
+  if (p.base == null) p.base = bodyY;
+  const rise = (p.base - bodyY) / p.torso;
+  p.rise = rise;
+  if (rise > S.jump) {
+    if (!p.air) { p.air = true; p.airFx = 1; onJump(p, t); }
+    p.lastAirT = t;
+  } else if (rise < S.jump * 0.5) p.air = false;
+  // 기준선: 내려갈 때는 빨리, 올라갈 때는 천천히 따라감
+  const rate = bodyY > p.base ? 8 : (p.air ? 0.15 : 1.0);
+  p.base += (bodyY - p.base) * (1 - Math.exp(-dt * rate));
+
+  // --- 제자리 달리기: 무릎을 번갈아 들기 (무릎이 안 보이면 몸 들썩임으로)
+  if (vis(25) && vis(26)) {
+    p.kneesSeenAt = t;
+    for (let leg = 0; leg < 2; leg++) {
+      const k = pts[25 + leg], o = pts[26 - leg];
+      const lift = (o.y - k.y) / p.torso;
+      if (!p.kneeUp[leg] && lift > S.knee) {
+        p.kneeUp[leg] = true;
+        if (p.lastLeg !== leg + 1) { p.lastLeg = leg + 1; doStep(p, t); }
+      } else if (p.kneeUp[leg] && lift < S.knee * 0.4) p.kneeUp[leg] = false;
+    }
+  }
+  if (t - p.kneesSeenAt > 1) {
+    if (!p.bounceUp && rise > S.jump * 0.45) { p.bounceUp = true; doStep(p, t); }
+    else if (p.bounceUp && rise < S.jump * 0.15) p.bounceUp = false;
+  }
+
+  // --- 움직임 양 (얼음 게임)
+  const KEY = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26];
+  if (p.prevPts) {
+    let sum = 0, n = 0;
+    for (const k of KEY) if (pts[k].v > 0.5 && p.prevPts[k].v > 0.5) {
+      sum += Math.hypot(pts[k].x - p.prevPts[k].x, pts[k].y - p.prevPts[k].y); n++;
+    }
+    const m = n ? sum / n / p.torso / dt : 0;
+    p.motion += (Math.min(m, 6) - p.motion) * (1 - Math.exp(-dt * 6));
+  }
+  p.prevPts = pts;
+
+  // --- 손 위치 (손목에서 팔 방향으로 조금 연장)
+  p.hands = [];
+  for (const [w, e] of [[15, 13], [16, 14]]) {
+    if (pts[w].v > 0.3) p.hands.push({ x: pts[w].x + (pts[w].x - pts[e].x) * 0.3, y: pts[w].y + (pts[w].y - pts[e].y) * 0.3 });
+  }
+}
+
+function doStep(p, t) {
+  if (t - p.lastStepT < 0.13) return;
+  p.lastStepT = t;
+  if (game && game.onStep) game.onStep(p, t, phase === 'play');
+}
+function onJump(p, t) { if (game && game.onJump) game.onJump(p, t, phase === 'play'); }
+
+// ---------------------------------------------------------------------------
+// 카메라 & 모델
+// ---------------------------------------------------------------------------
+function showLoading(txt) { $('#loadingText').textContent = txt; $('#loading').classList.remove('hidden'); }
+function hideLoading() { $('#loading').classList.add('hidden'); }
+
+let camPromise = null;
+function startCamera() {
+  if (!camPromise) camPromise = (async () => {
+    showLoading('카메라를 켜는 중... 📷');
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('이 브라우저는 카메라를 지원하지 않아요. 사파리로 https 주소에서 열어 주세요.');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+      showLoading('몸 인식 인공지능을 불러오는 중... 🤖\n(처음 한 번은 조금 걸려요)');
+      const { PoseLandmarker, FilesetResolver } = await import(MP_URL);
+      const fileset = await FilesetResolver.forVisionTasks(MP_WASM);
+      const opts = d => ({ baseOptions: { modelAssetPath: MODEL_URL, delegate: d }, runningMode: 'VIDEO',
+        numPoses: 2, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+      try { landmarker = await PoseLandmarker.createFromOptions(fileset, opts('GPU')); }
+      catch { landmarker = await PoseLandmarker.createFromOptions(fileset, opts('CPU')); }
+      camReady = true;
+      hideLoading();
+      return true;
+    } catch (e) {
+      hideLoading();
+      camPromise = null;
+      console.error(e);
+      const msg = e && e.name === 'NotAllowedError'
+        ? '카메라 사용이 거부됐어요. 설정 > Safari > 카메라 에서 허용해 주세요.'
+        : (e && e.message) || '카메라를 켜지 못했어요.';
+      setStatus('⚠️ ' + msg + ' 지금은 "👆 터치" 모드로 할 수 있어요.');
+      return false;
+    }
+  })();
+  return camPromise;
+}
+
+function detect(t) {
+  if (!camReady || !landmarker || video.readyState < 2) return;
+  if (video.currentTime === lastVideoTime) return;
+  lastVideoTime = video.currentTime;
+  try {
+    const res = landmarker.detectForVideo(video, performance.now());
+    processPoses(res.landmarks || [], t);
+  } catch (e) { console.warn(e); }
+}
+
+// ---------------------------------------------------------------------------
+// 효과
+// ---------------------------------------------------------------------------
+const fx = [], parts = [];
+function floatText(x, y, txt, color = '#fff', size = 44) { fx.push({ x, y, txt, color, size, t: 0, life: 1.1 }); }
+function burst(x, y, color, n = 16) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 120 + Math.random() * 280;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80, c: color, t: 0, life: .6 + Math.random() * .4, r: 4 + Math.random() * 6 });
+  }
+}
+function drawFx(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i]; q.t += dt; if (q.t > q.life) { parts.splice(i, 1); continue; }
+    q.vy += 600 * dt; q.x += q.vx * dt; q.y += q.vy * dt;
+    ctx.globalAlpha = 1 - q.t / q.life; ctx.fillStyle = q.c;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const f = fx[i]; f.t += dt; if (f.t > f.life) { fx.splice(i, 1); continue; }
+    const k = f.t / f.life, sc = k < .15 ? .6 + k / .15 * .5 : 1.1 - (k - .15) * .15;
+    ctx.globalAlpha = 1 - Math.max(0, (k - .6) / .4);
+    text(f.txt, f.x, f.y - k * 60, f.size * sc, f.color);
+  }
+  ctx.globalAlpha = 1;
+}
+function text(s, x, y, size, color = '#fff', align = 'center', stroke = true) {
+  ctx.font = `${size}px Jua, 'Apple SD Gothic Neo', sans-serif`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle';
+  if (stroke) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size / 7); ctx.strokeStyle = 'rgba(20,20,45,.85)'; ctx.strokeText(s, x, y); }
+  ctx.fillStyle = color; ctx.fillText(s, x, y);
+}
+function rrect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+const sideCx = i => (i ? 0.75 : 0.25) * W;
+function bodyInfo(p) {
+  if (p.lm) {
+    const L = p.lm, tor = p.torso;
+    const sh = { x: (L[11].x + L[12].x) / 2, y: (L[11].y + L[12].y) / 2 };
+    let foot = sh.y + tor * 3.1;
+    if (L[27].v > 0.4 && L[28].v > 0.4) foot = Math.max(L[27].y, L[28].y) + tor * 0.15;
+    return { cx: sh.x, top: L[0].y - tor * 0.9, hand: sh.y + tor * 0.85, foot: Math.min(foot, H - 8), half: tor * 1.15, tor };
+  }
+  const tor = H * 0.18;
+  return { cx: sideCx(p.i), top: H * 0.18, hand: H * 0.5, foot: H * 0.9, half: Math.min(W * 0.14, tor * 1.15), tor };
+}
+
+// ---------------------------------------------------------------------------
+// 그리기 공통
+// ---------------------------------------------------------------------------
+const BONES = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+function drawBackground() {
+  if (camReady && video.readyState >= 2) {
+    updateVideoMap();
+    ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1);
+    ctx.drawImage(video, vmap.ox, vmap.oy, vmap.dw, vmap.dh);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(15,18,45,.22)'; ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#7ec8ff'); g.addColorStop(.7, '#c6ecff'); g.addColorStop(.7, '#8fd67a'); g.addColorStop(1, '#6cbf58');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  // 가운데 선
+  ctx.save(); ctx.setLineDash([14, 14]); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.restore();
+}
+function drawSkeleton(p) {
+  if (!p.lm) return;
+  const L = p.lm;
+  ctx.strokeStyle = p.color; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.globalAlpha = .75;
+  for (const [a, b] of BONES) if (L[a].v > .4 && L[b].v > .4) {
+    ctx.beginPath(); ctx.moveTo(L[a].x, L[a].y); ctx.lineTo(L[b].x, L[b].y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const head = L[0];
+  if (p.airFx > 0) {
+    ctx.strokeStyle = '#7dff9b'; ctx.lineWidth = 6; ctx.globalAlpha = p.airFx;
+    ctx.beginPath(); ctx.arc(head.x, head.y, p.torso * (0.5 + (1 - p.airFx) * .5), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  text(p.name, head.x, Math.max(120, head.y - p.torso * 0.75), Math.min(44, Math.max(22, p.torso * 0.32)), p.color);
+}
+function drawHands(p) {
+  for (const h of p.hands) {
+    const r = Math.max(22, (p.torso || 80) * 0.22);
+    const g = ctx.createRadialGradient(h.x, h.y, 2, h.x, h.y, r);
+    g.addColorStop(0, '#fff'); g.addColorStop(.4, p.color); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, r, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function drawScoreBoxes(labelFn) {
+  players.forEach(p => {
+    const w = Math.min(260, W * 0.3), h = 76, x = p.i ? W - w - 16 : 16, y = 14 + Math.max(0, safeTop());
+    ctx.fillStyle = 'rgba(255,255,255,.92)'; rrect(x, y, w, h, 20); ctx.fill();
+    ctx.fillStyle = p.color; rrect(x, y, 14, h, 7); ctx.fill();
+    text(p.name, x + 28, y + 22, 24, p.color, 'left', false);
+    text(labelFn(p), x + 28, y + 54, 34, '#1f2340', 'left', false);
+    if (!touchMode() && camReady && !p.lm && Math.floor(performance.now() / 500) % 2) {
+      text('📷 화면 안으로 들어와요!', sideCx(p.i), H * 0.5, Math.min(40, W * 0.035), '#fff');
+    }
+  });
+}
+function safeTop() { return 0; }
+
+// ---------------------------------------------------------------------------
+// 게임 1: 줄넘기
+// ---------------------------------------------------------------------------
+const JumpRope = {
+  id: 'rope', title: '줄넘기', emoji: '🪢', desc: '줄이 발밑에 오면 폴짝!', color: '#ff6b9a', duration: 60,
+  init() { this.theta = 0; this.pending = []; this.elapsed = 0;
+    players.forEach(p => { p.score = 0; p.combo = 0; p.best = 0; }); },
+  period() { return Math.max(0.85, 1.55 - this.elapsed * 0.012); },
+  update(dt, t, live) {
+    if (live) this.elapsed += dt;
+    const prev = this.theta;
+    this.theta += 2 * Math.PI * dt / (live ? this.period() : 1.6);
+    const TWO = 2 * Math.PI;
+    if (Math.floor((this.theta - Math.PI) / TWO) > Math.floor((prev - Math.PI) / TWO)) {
+      SFX.whoosh();
+      if (live) this.pending.push({ tb: t, at: t + 0.15 });
+    }
+    this.pending = this.pending.filter(ev => {
+      if (t < ev.at) return true;
+      players.forEach(p => this.judge(p, ev.tb));
+      return false;
+    });
+  },
+  judge(p, tb) {
+    const b = bodyInfo(p);
+    if (!touchMode() && !p.lm) return; // 안 보이면 벌점 없음
+    if (p.lastAirT >= tb - 0.42 && p.lastAirT <= tb + 0.15) {
+      p.score++; p.combo++; p.best = Math.max(p.best, p.combo);
+      SFX.good();
+      floatText(b.cx, b.foot - 40, p.combo >= 5 && p.combo % 5 === 0 ? `${p.combo}연속! 🔥` : '+1', '#7dff9b', p.combo % 5 === 0 ? 54 : 44);
+      if (p.combo % 10 === 0) burst(b.cx, b.foot - 40, '#ffd84d', 26);
+    } else {
+      p.combo = 0; p.shake = 0.4; SFX.bad();
+      floatText(b.cx, b.foot - 60, '앗! 걸렸다', '#ff6b81', 40);
+    }
+  },
+  onTap(p, x, y, t) { p.lastAirT = t; p.airFx = 1; },
+  draw(t) {
+    const th = this.theta, TWO = 2 * Math.PI;
+    const m = ((th % TWO) + TWO) % TWO;
+    const v = -Math.cos(th); // -1 머리 위, +1 발밑
+    const front = Math.sin(th) > 0;
+    let toBottom = (Math.PI - m) / TWO; if (toBottom < 0) toBottom += 1;
+    toBottom *= this.period();
+    players.forEach(p => {
+      const b = bodyInfo(p);
+      const shx = p.shake > 0 ? Math.sin(t * 60) * 10 * p.shake : 0;
+      const x1 = b.cx - b.half + shx, x2 = b.cx + b.half + shx, hy = b.hand;
+      const apex = v > 0 ? hy + v * (b.foot - hy) : hy + v * (hy - b.top);
+      const cy = hy + 2 * (apex - hy);
+      // 손잡이
+      ctx.fillStyle = p.color;
+      for (const x of [x1, x2]) { rrect(x - 9, hy - 22, 18, 44, 8); ctx.fill(); }
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = front ? '#ffe14d' : 'rgba(255,225,77,.55)';
+      ctx.lineWidth = front ? 9 : 5;
+      ctx.beginPath(); ctx.moveTo(x1, hy); ctx.quadraticCurveTo(b.cx + shx, cy, x2, hy); ctx.stroke();
+      // 점프 신호
+      if (phase === 'play' && toBottom < 0.32) {
+        ctx.fillStyle = 'rgba(125,255,155,.35)';
+        ctx.beginPath(); ctx.ellipse(b.cx, b.foot, b.half * 1.1, 16, 0, 0, Math.PI * 2); ctx.fill();
+        text('점프!', b.cx, b.foot - 34, 40, '#7dff9b');
+      }
+      if (p.combo >= 3) text(`🔥 ${p.combo}`, b.cx, b.top - 10, 36, '#ffd84d');
+    });
+  },
+  label(p) { return `${p.score}번`; },
+  result() {
+    const r = players.map(p => ({ main: `${p.score}번`, sub: `최고 연속 ${p.best}번`, v: p.score }));
+    return r;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 게임 2: 달리기 경주
+// ---------------------------------------------------------------------------
+const Race = {
+  id: 'race', title: '달리기 경주', emoji: '🏃', desc: '제자리에서 무릎 들고 뛰기!', color: '#3dbf6b', duration: 90, countUp: true,
+  goal: 100,
+  init() { this.elapsed = 0; this.firstAt = null;
+    players.forEach(p => { p.pos = 0; p.speed = 0; p.steps = 0; p.finishT = null; }); },
+  onStep(p, t, live) {
+    if (!live || p.finishT != null) return;
+    p.speed = Math.min(10, p.speed + 1.6); p.steps++; SFX.step(p.steps + p.i);
+  },
+  onTap(p, x, y, t) { this.onStep(p, t, true); },
+  update(dt, t, live) {
+    if (!live) return;
+    this.elapsed += dt;
+    players.forEach(p => {
+      if (p.finishT != null) return;
+      p.speed *= Math.exp(-dt * 1.2);
+      p.pos = Math.min(this.goal, p.pos + p.speed * dt);
+      if (p.pos >= this.goal) {
+        p.finishT = this.elapsed;
+        const first = this.firstAt == null;
+        if (first) { this.firstAt = this.elapsed; SFX.win(); say(`${p.name} 골인!`); }
+        floatText(sideCx(p.i), H * 0.35, first ? '🏆 1등 골인!' : '🎉 골인!', '#ffd84d', 64);
+        burst(sideCx(p.i), H * 0.35, p.color, 40);
+      }
+    });
+  },
+  isOver() {
+    if (players.every(p => p.finishT != null)) return true;
+    return this.firstAt != null && this.elapsed - this.firstAt > 6;
+  },
+  draw(t) {
+    const panelH = Math.max(150, H * 0.3), y0 = H - panelH;
+    ctx.fillStyle = 'rgba(30,35,70,.55)'; ctx.fillRect(0, y0, W, panelH);
+    const laneH = (panelH - 30) / 2, x0 = 70, x1 = W - 70;
+    players.forEach(p => {
+      const ly = y0 + 15 + p.i * laneH;
+      ctx.fillStyle = p.i ? '#d9643a' : '#c9563a'; rrect(x0 - 40, ly + 6, x1 - x0 + 80, laneH - 12, 14); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 3; ctx.setLineDash([18, 16]);
+      ctx.beginPath(); ctx.moveTo(x0 - 30, ly + laneH / 2); ctx.lineTo(x1 + 30, ly + laneH / 2); ctx.stroke(); ctx.setLineDash([]);
+      for (let m = 25; m < this.goal; m += 25) {
+        const mx = x0 + (x1 - x0) * m / this.goal;
+        text(`${m}m`, mx, ly + 20, 16, 'rgba(255,255,255,.85)', 'center', false);
+      }
+      // 결승선
+      for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#fff' : '#222'; ctx.fillRect(x1 + 4, ly + 6 + k * (laneH - 12) / 6, 10, (laneH - 12) / 6); }
+      const rx = x0 + (x1 - x0) * p.pos / this.goal;
+      const bob = p.speed > 0.5 ? Math.abs(Math.sin(t * (6 + p.speed))) * 8 : 0;
+      const size = Math.min(laneH * 0.75, 70);
+      if (p.speed > 4) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3;
+        for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(rx - size * .6 - k * 6, ly + laneH * (.35 + k * .15)); ctx.lineTo(rx - size * .6 - 20 - p.speed * 4 - k * 6, ly + laneH * (.35 + k * .15)); ctx.stroke(); } }
+      ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(rx, ly + laneH / 2, size * .55, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(rx, ly + laneH / 2 - bob); ctx.scale(-1, 1);
+      ctx.font = `${size}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🏃', 0, 2); ctx.restore();
+      text(p.name, x0 - 6, ly + laneH / 2, 20, '#fff', 'right');
+      // 위쪽 큰 속도계
+      const sx = sideCx(p.i);
+      const meterW = Math.min(W * 0.32, 300), my = y0 - 46;
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; rrect(sx - meterW / 2, my, meterW, 22, 11); ctx.fill();
+      ctx.fillStyle = p.speed > 6 ? '#ff5e5e' : p.speed > 3 ? '#ffd84d' : '#7dff9b';
+      rrect(sx - meterW / 2, my, Math.max(22, meterW * p.speed / 10), 22, 11); ctx.fill();
+      text(p.finishT != null ? `골인! ${p.finishT.toFixed(1)}초` : p.speed < 0.6 ? '뛰어요! 🦵' : '⚡'.repeat(1 + Math.floor(p.speed / 3.4)),
+        sx, my - 30, 34, '#fff');
+    });
+  },
+  label(p) { return `${Math.floor(p.pos)}m`; },
+  result() {
+    return players.map(p => ({ main: p.finishT != null ? `${p.finishT.toFixed(1)}초` : `${Math.floor(p.pos)}m`,
+      sub: `걸음 ${p.steps}번`, v: p.finishT != null ? 1000 - p.finishT : p.pos }));
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 게임 3: 풍선 터뜨리기
+// ---------------------------------------------------------------------------
+const BCOLORS = ['#ff5e7e', '#5ec8ff', '#7ee07a', '#c18bff', '#ff9f43'];
+const Balloons = {
+  id: 'balloon', title: '풍선 팡팡', emoji: '🎈', desc: '손으로 풍선을 터뜨려요!', color: '#5e8bff', duration: 45,
+  init() { this.list = []; this.spawn = [0.3, 0.3]; this.elapsed = 0; players.forEach(p => { p.score = 0; p.best = 0; }); },
+  update(dt, t, live) {
+    if (!live) return;
+    this.elapsed += dt;
+    const r = Math.max(34, Math.min(W, H) * 0.075);
+    for (let s = 0; s < 2; s++) {
+      this.spawn[s] -= dt;
+      if (this.spawn[s] <= 0) {
+        this.spawn[s] = Math.max(0.45, 0.95 - this.elapsed * 0.01) * (0.7 + Math.random() * 0.6);
+        const gold = Math.random() < 0.1;
+        const xmin = s * W / 2 + r + 20, xmax = (s + 1) * W / 2 - r - 20;
+        this.list.push({ s, x: xmin + Math.random() * (xmax - xmin), y: H + r, r: gold ? r * 0.85 : r,
+          vy: H * (0.16 + Math.random() * 0.12 + this.elapsed * 0.002), c: gold ? '#ffd84d' : BCOLORS[Math.floor(Math.random() * BCOLORS.length)],
+          gold, wob: Math.random() * 6 });
+      }
+    }
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const b = this.list[i];
+      b.y -= b.vy * dt; b.x += Math.sin(t * 2 + b.wob) * 25 * dt;
+      if (b.y < -b.r * 2) { this.list.splice(i, 1); continue; }
+      const p = players[b.s];
+      for (const h of p.hands) {
+        if (Math.hypot(h.x - b.x, h.y - b.y) < b.r + Math.max(22, (p.torso || 80) * 0.2)) { this.popAt(i, p); break; }
+      }
+    }
+  },
+  popAt(i, p) {
+    const b = this.list[i]; this.list.splice(i, 1);
+    const pts = b.gold ? 3 : 1; p.score += pts;
+    if (b.gold) SFX.gold(); else SFX.pop();
+    burst(b.x, b.y, b.c, b.gold ? 30 : 16);
+    floatText(b.x, b.y, b.gold ? '+3 ⭐' : '+1', b.gold ? '#ffd84d' : '#fff', b.gold ? 52 : 40);
+  },
+  onTap(p, x, y) {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const b = this.list[i];
+      if (b.s === p.i && Math.hypot(x - b.x, y - b.y) < b.r * 1.3) { this.popAt(i, p); return; }
+    }
+  },
+  draw(t) {
+    for (const b of this.list) {
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y + b.r * 1.15);
+      ctx.quadraticCurveTo(b.x + Math.sin(t * 3 + b.wob) * 12, b.y + b.r * 1.7, b.x, b.y + b.r * 2.3); ctx.stroke();
+      ctx.fillStyle = b.c;
+      ctx.beginPath(); ctx.ellipse(b.x, b.y, b.r * 0.88, b.r * 1.08, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(b.x - 7, b.y + b.r * 1.18); ctx.lineTo(b.x + 7, b.y + b.r * 1.18); ctx.lineTo(b.x, b.y + b.r * 1.02); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.beginPath(); ctx.ellipse(b.x - b.r * .32, b.y - b.r * .42, b.r * .16, b.r * .28, -.5, 0, Math.PI * 2); ctx.fill();
+      if (b.gold) text('⭐', b.x, b.y, b.r * 0.8, '#fff', 'center', false);
+    }
+    players.forEach(drawHands);
+  },
+  label(p) { return `${p.score}점`; },
+  result() { return players.map(p => ({ main: `${p.score}점`, sub: '터뜨린 풍선 점수', v: p.score })); },
+};
+
+// ---------------------------------------------------------------------------
+// 게임 4: 얼음 땡 (춤추다가 멈추기)
+// ---------------------------------------------------------------------------
+const MELODY = [523, 659, 784, 659, 587, 698, 880, 698, 523, 659, 784, 1046, 988, 784, 659, 587];
+const Freeze = {
+  id: 'freeze', title: '얼음 게임', emoji: '🧊', desc: '춤추다가 "얼음!"하면 멈춰요', color: '#2bb7c7', rounds: 8,
+  init() { this.round = 0; this.mode = 'dance'; this.left = 3; this.beat = 0; this.noteI = 0; this.done = false; this.freezeT = 0;
+    players.forEach(p => { p.score = 0; p.caught = false; p.best = 0; }); this.startDance(true); },
+  startDance(first) { this.mode = 'dance'; this.left = 2.5 + Math.random() * 3.5; if (!first) say('춤춰요!'); },
+  startFreeze() { this.mode = 'freeze'; this.left = 2.5 + Math.random() * 1.5; this.freezeT = 0;
+    players.forEach(p => p.caught = false); say('얼음!'); tone(1500, .25, 'square', .1); },
+  update(dt, t, live) {
+    if (!live) return;
+    this.left -= dt;
+    if (this.mode === 'dance') {
+      this.beat -= dt;
+      if (this.beat <= 0) { this.beat = 0.25; SFX.note(MELODY[this.noteI++ % MELODY.length]); }
+      if (this.left <= 0) this.startFreeze();
+    } else {
+      this.freezeT += dt;
+      if (!touchMode() && this.freezeT > 0.7) players.forEach(p => {
+        if (!p.caught && p.lm && p.motion > sens().move) this.catch(p);
+      });
+      if (this.left <= 0) {
+        players.forEach(p => {
+          const b = bodyInfo(p);
+          if (!p.caught && (p.lm || touchMode())) { p.score++; floatText(b.cx, H * 0.4, '+1 성공! ❄️', '#9ff3ff', 48); }
+        });
+        SFX.good();
+        this.round++;
+        if (this.round >= this.rounds) this.done = true; else this.startDance(false);
+      }
+    }
+  },
+  catch(p) { p.caught = true; SFX.bad(); const b = bodyInfo(p); floatText(b.cx, H * 0.45, '움직였다! 😝', '#ff6b81', 50); },
+  onTap(p) { if (this.mode === 'freeze' && !p.caught) this.catch(p); },
+  isOver() { return this.done; },
+  draw(t) {
+    if (phase !== 'play') return;
+    if (this.mode === 'freeze') {
+      ctx.fillStyle = 'rgba(120,220,255,.22)'; ctx.fillRect(0, 0, W, H);
+      text('얼음! 🧊', W / 2, H * 0.2, Math.min(120, W * 0.11), '#bff4ff');
+      players.forEach(p => {
+        if (p.caught) {
+          const b = bodyInfo(p);
+          ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 10;
+          ctx.beginPath(); ctx.arc(sideCx(p.i), H * 0.6, Math.min(W * .1, 90), 0, Math.PI * 2); ctx.stroke();
+          text('✗', sideCx(p.i), H * 0.6, 90, '#ff4d6d');
+        } else if (this.freezeT > 0.7) {
+          const m = Math.min(1, (p.motion || 0) / sens().move);
+          const w = Math.min(W * .3, 260), x = sideCx(p.i) - w / 2, y = H * 0.82;
+          ctx.fillStyle = 'rgba(255,255,255,.4)'; rrect(x, y, w, 20, 10); ctx.fill();
+          ctx.fillStyle = m > .7 ? '#ff4d6d' : '#7dff9b'; rrect(x, y, Math.max(20, w * m), 20, 10); ctx.fill();
+          text('흔들림', x + w / 2, y - 22, 22, '#fff');
+        }
+      });
+    } else {
+      const hue = (t * 120) % 360;
+      text('춤춰요! 💃🕺', W / 2, H * 0.2 + Math.sin(t * 8) * 8, Math.min(100, W * 0.09), `hsl(${hue},90%,70%)`);
+      for (let k = 0; k < 2; k++) text('🎵', (k ? .85 : .15) * W, H * .3 + Math.sin(t * 5 + k * 2) * 20, 50, '#fff', 'center', false);
+    }
+    text(`${this.round + 1} / ${this.rounds} 라운드`, W / 2, H - 40, 28, '#fff');
+  },
+  label(p) { return `❄️ ${p.score}번`; },
+  result() { return players.map(p => ({ main: `${p.score}번`, sub: `${this.rounds}라운드 중 멈추기 성공`, v: p.score })); },
+};
+
+const GAMES = [JumpRope, Race, Balloons, Freeze];
+
+// ---------------------------------------------------------------------------
+// 진행
+// ---------------------------------------------------------------------------
+let game = null, phase = 'menu', phaseT = 0, timeLeft = 0, countN = 0;
+
+async function startGame(g) {
+  audio();
+  players[0].name = $('#n1').value.trim() || '왼쪽';
+  players[1].name = $('#n2').value.trim() || '오른쪽';
+  if (!touchMode()) {
+    const ok = await startCamera();
+    if (!ok) return;
+  }
+  game = g; game.init();
+  fx.length = 0; parts.length = 0;
+  timeLeft = g.duration || 0;
+  $('#menu').classList.add('hidden'); $('#result').classList.add('hidden'); $('#quit').classList.remove('hidden');
+  phase = 'countdown'; phaseT = 0; countN = 3; SFX.count(); say('준비');
+}
+function endGame() {
+  phase = 'result';
+  $('#quit').classList.add('hidden');
+  const r = game.result();
+  const winner = r[0].v === r[1].v ? -1 : (r[0].v > r[1].v ? 0 : 1);
+  $('#resTitle').textContent = winner < 0 ? '🤝 무승부! 둘 다 최고!' : `🏆 ${players[winner].name} 승리!`;
+  $('#resCards').innerHTML = '';
+  r.forEach((x, i) => {
+    const d = document.createElement('div'); d.className = 'res-card'; d.style.background = players[i].color;
+    d.innerHTML = (winner === i ? '<div class="crown">👑</div>' : '') +
+      `<div class="n"></div><div class="s"></div><div class="x"></div>`;
+    d.querySelector('.n').textContent = players[i].name;
+    d.querySelector('.s').textContent = x.main;
+    d.querySelector('.x').textContent = x.sub;
+    $('#resCards').appendChild(d);
+  });
+  $('#result').classList.remove('hidden');
+  SFX.win();
+  say(winner < 0 ? '무승부! 둘 다 최고!' : `${players[winner].name} 승리!`);
+}
+function toMenu() {
+  phase = 'menu'; game = null;
+  $('#result').classList.add('hidden'); $('#quit').classList.add('hidden'); $('#menu').classList.remove('hidden');
+}
+
+let lastT = performance.now() / 1000;
+function loop() {
+  requestAnimationFrame(loop);
+  const t = performance.now() / 1000, rawDt = Math.min(0.5, t - lastT), dt = Math.min(0.05, rawDt); lastT = t;
+  detect(t);
+  players.forEach(p => { p.shake = Math.max(0, p.shake - dt); p.airFx = Math.max(0, p.airFx - dt * 2.5); });
+
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  players.forEach(drawSkeleton);
+
+  if (game && (phase === 'countdown' || phase === 'play')) {
+    if (phase === 'countdown') {
+      phaseT += rawDt;
+      game.update(dt, t, false);
+      if (phaseT >= 1) { phaseT -= 1; countN--; if (countN > 0) SFX.count(); else { SFX.go(); say('시작!'); phase = 'play'; } }
+    } else {
+      game.update(dt, t, true);
+      if (game.duration) {
+        timeLeft -= rawDt;
+        if (timeLeft <= 0 || (game.isOver && game.isOver())) { timeLeft = 0; endGame(); }
+      } else if (game.isOver && game.isOver()) endGame();
+    }
+    game.draw(t);
+    drawScoreBoxes(p => game.label(p));
+    if (phase === 'countdown') text(countN > 0 ? String(countN) : '시작!', W / 2, H / 2, Math.min(200, H * .3), '#ffd84d');
+    else if (phaseT < 0.8 && countN <= 0) { phaseT += dt; text('시작!', W / 2, H / 2, Math.min(200, H * .3), '#ffd84d'); }
+    if (phase === 'play' && game.duration && !game.countUp) {
+      const s = Math.ceil(timeLeft);
+      text(`⏱ ${s}`, W / 2, 80, 44, s <= 5 ? '#ff6b81' : '#fff');
+    } else if (phase === 'play' && game.countUp) {
+      text(`⏱ ${game.elapsed.toFixed(1)}초`, W / 2, 80, 40, '#fff');
+    }
+    if (touchMode()) text('👆 내 쪽 화면을 톡톡!', W / 2, H - 16 - (game.id === 'freeze' ? 50 : 0) - (game.id === 'race' ? Math.max(150, H * .3) : 0), 22, 'rgba(255,255,255,.9)');
+  } else if (phase === 'menu') {
+    menuStatusTick(t);
+  }
+  drawFx(dt);
+}
+requestAnimationFrame(loop);
+
+// 터치 입력
+cv.addEventListener('pointerdown', e => {
+  if (!game || phase !== 'play' || !touchMode()) return;
+  const p = players[e.clientX < W / 2 ? 0 : 1];
+  game.onTap && game.onTap(p, e.clientX, e.clientY, performance.now() / 1000);
+});
+
+// ---------------------------------------------------------------------------
+// 메뉴 UI
+// ---------------------------------------------------------------------------
+function setStatus(s) { $('#status').textContent = s; }
+let lastMenuTick = 0;
+function menuStatusTick(t) {
+  if (t - lastMenuTick < 0.3) return; lastMenuTick = t;
+  if (touchMode()) { $('#seen1').textContent = '왼쪽'; $('#seen2').textContent = '오른쪽'; return; }
+  if (!camReady) return;
+  $('#seen1').textContent = players[0].lm ? '✅ 보여요' : '👀 왼쪽에 서요';
+  $('#seen2').textContent = players[1].lm ? '✅ 보여요' : '👀 오른쪽에 서요';
+}
+
+const gamesEl = $('#games');
+GAMES.forEach(g => {
+  const b = document.createElement('button');
+  b.className = 'card'; b.style.background = g.color;
+  b.innerHTML = `<span class="em"></span><span class="t"></span><span class="d"></span>`;
+  b.querySelector('.em').textContent = g.emoji;
+  b.querySelector('.t').textContent = g.title;
+  b.querySelector('.d').textContent = g.desc;
+  b.addEventListener('click', () => startGame(g));
+  gamesEl.appendChild(b);
+});
+
+function bindSeg(id, key) {
+  const el = $(id);
+  const paint = () => el.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === settings[key]));
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    settings[key] = b.dataset.v; store.set(key, settings[key]); paint(); updateCamBtn();
+  });
+  paint();
+}
+bindSeg('#sens', 'sens'); bindSeg('#mode', 'mode');
+
+function updateCamBtn() {
+  $('#camBtn').classList.toggle('hidden', touchMode() || camReady);
+  if (touchMode()) setStatus('👆 터치 모드: 게임 중에 자기 쪽 화면을 톡톡 눌러요.');
+  else if (camReady) setStatus('📷 카메라 준비 완료! 두 사람이 다 보이면 게임을 골라요.');
+  else setStatus('');
+}
+$('#camBtn').addEventListener('click', async () => { audio(); if (await startCamera()) updateCamBtn(); });
+
+for (const [id, k] of [['#n1', 0], ['#n2', 1]]) {
+  const el = $(id);
+  el.value = store.get('name' + k, el.value);
+  el.addEventListener('change', () => store.set('name' + k, el.value.trim()));
+}
+$('#againBtn').addEventListener('click', () => startGame(game));
+$('#menuBtn').addEventListener('click', toMenu);
+$('#quit').addEventListener('click', toMenu);
+updateCamBtn();
+
+// ---------------------------------------------------------------------------
+// 앱 설치 (홈 화면에 추가)
+// ---------------------------------------------------------------------------
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
+}
+const isStandalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let deferredPrompt = null;
+function showInstall() {
+  const el = $('#install');
+  if (isStandalone || store.get('installHidden', '') === '1') { el.classList.add('hidden'); return; }
+  el.innerHTML = '';
+  const close = document.createElement('button');
+  close.textContent = '✕'; close.setAttribute('aria-label', '닫기');
+  close.style.cssText = 'float:right;border:none;background:none;font:inherit;font-size:20px;color:#2c4a6e;cursor:pointer';
+  close.onclick = () => { store.set('installHidden', '1'); el.classList.add('hidden'); };
+  el.appendChild(close);
+  const msg = document.createElement('div');
+  if (deferredPrompt) {
+    msg.textContent = '📲 앱으로 설치하면 홈 화면에서 바로 열 수 있어요!';
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = '앱 설치하기';
+    b.onclick = async () => { deferredPrompt.prompt(); await deferredPrompt.userChoice.catch(() => {}); deferredPrompt = null; el.classList.add('hidden'); };
+    el.append(msg, b);
+  } else if (isIOS) {
+    msg.innerHTML = '📲 <b>앱으로 설치하기</b>: 사파리 위쪽의 <b>공유 버튼 (□↑)</b>을 누르고 → <b>"홈 화면에 추가"</b>를 고르세요.<br>홈 화면의 🤸 아이콘으로 전체 화면으로 바로 시작할 수 있어요.';
+    el.appendChild(msg);
+  } else return;
+  el.classList.remove('hidden');
+}
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; showInstall(); });
+addEventListener('appinstalled', () => $('#install').classList.add('hidden'));
+showInstall();
+
+// 테스트용 훅 (개발자 도구에서 사용)
+window.__mg = { players, processPoses, startCamera, get phase() { return phase; }, get game() { return game; } };
+</script>
+</body>
+</html>
