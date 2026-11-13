@@ -92,6 +92,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .suitpick button{width:92px;height:92px;border-radius:20px;background:var(--paper);font-size:56px;color:var(--ink)}
 .suitpick button.red{color:var(--red)}
 .ztitle{font-family:var(--display);font-size:26px;margin-bottom:12px}
+.actions.choose{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.actions.choose .ztitle{margin:0;color:var(--gold)}
+.actions.choose .suitpick button{width:76px;height:76px;font-size:46px;border-radius:16px}
 .full{position:fixed;inset:0;z-index:20;display:grid;grid-template-rows:1fr auto 1fr;background:rgba(10,28,38,.96);
   padding:max(12px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .half{display:grid;place-items:center;text-align:center;gap:10px}
@@ -156,10 +159,10 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <div class="rules">
       <h2>규칙</h2>
       <div class="rule"><div class="ic">♠ 5</div><div>바닥 카드와 <b>같은 모양</b>이나 <b>같은 숫자</b>를 한 장 내요. 낼 카드가 없으면 한 장 가져가요. 먼저 다 내면 이겨요!</div></div>
-      <div class="rule"><div class="ic red">♥ 2</div><div><b>공격 +2.</b> 상대는 2를 내서 막거나, 쌓인 만큼 카드를 가져가요.</div></div>
+      <div class="rule"><div class="ic red">2 A</div><div><b>공격!</b> 2는 +2장, A는 +3장, <b>♠A는 +4장.</b> 상대는 2나 A를 내서 막고 공격을 넘기거나, 쌓인 만큼 카드를 가져가요.</div></div>
       <div class="rule"><div class="ic">♣ 7</div><div><b>모양 바꾸기.</b> 다음에 낼 모양을 내 맘대로 정해요.</div></div>
-      <div class="rule"><div class="ic red">♦ J</div><div><b>한 번 더!</b> 내 차례가 한 번 더 와요.</div></div>
-      <div class="rule"><div class="ic">🪢</div><div><b>줄넘기 대결!</b> 아무 때나 낼 수 있어요. 줄이 바닥에 올 때 <b>점프!</b>를 눌러요. 먼저 걸린 사람이 2장 가져가요. 공격받을 때 내면 쌓인 공격이 대결 벌칙이 돼요.</div></div>
+      <div class="rule"><div class="ic red">J K</div><div><b>한 번 더!</b> J나 K를 내면 내 차례가 한 번 더 와요.</div></div>
+      <div class="rule"><div class="ic">🪢</div><div><b>줄넘기 대결!</b> 아무 때나 낼 수 있어요. 줄이 바닥에 올 때 <b>점프!</b>를 눌러요. 먼저 걸린 사람이 2장 가져가고, <b>이긴 사람이 먼저</b> 카드를 내요. 공격받을 때 내면 쌓인 공격이 대결 벌칙이 돼요.</div></div>
       <div class="rule"><div class="ic">7 7 7</div><div><b>훌라 콤보.</b> 같은 숫자 3장, 또는 같은 모양으로 이어진 숫자 3장(예: ♥3 ♥4 ♥5)은 바닥과 상관없이 한꺼번에 낼 수 있어요. (공격받을 때는 안 돼요)</div></div>
       <div class="rule"><div class="ic">1장!</div><div><b>원카드!</b> 카드가 1장 남으면 버튼이 떠요. 내가 먼저 누르면 성공, 상대가 먼저 누르면 1장 벌칙!</div></div>
     </div>
@@ -210,7 +213,7 @@ function newDeck(){
   for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}
   return d;
 }
-const isSpecial=c=>c.s==='R'||c.r===2||c.r===7||c.r===11;
+const isSpecial=c=>c.s==='R'||c.r===1||c.r===2||c.r===7||c.r===11||c.r===13;
 const top=()=>G.pile[G.pile.length-1];
 
 function newRound(){
@@ -243,7 +246,7 @@ function sortHand(p){
 
 /* ---------- rules ---------- */
 function canPlay(c){
-  if(G.pending>0)return c.r===2&&c.s!=='R'||c.s==='R';
+  if(G.pending>0)return c.s==='R'||c.r===2||c.r===1;
   if(c.s==='R')return true;
   const t=top();
   if(t.s==='R')return true;
@@ -267,7 +270,7 @@ function cardEl(c,opts={}){
   if(c.s==='R'){el.className='card rope';el.innerHTML='<div class="mid">🪢</div><div class="tag">줄넘기</div>';return el;}
   const su=SUITS[c.s];
   el.className='card'+(su.red?' red':'');
-  const tag=c.r===2?'+2 공격':c.r===7?'모양 바꾸기':c.r===11?'한 번 더':'';
+  const tag=c.r===1?(c.s==='S'?'+4 공격':'+3 공격'):c.r===2?'+2 공격':c.r===7?'모양 바꾸기':(c.r===11||c.r===13)?'한 번 더':'';
   el.innerHTML=`<div class="tl">${RL[c.r]}<small>${su.sym}</small></div><div class="mid">${su.sym}</div>${tag?`<div class="tag">${tag}</div>`:''}`;
   return el;
 }
@@ -310,6 +313,16 @@ function renderZone(p){
   });
 
   const a=document.createElement('div');a.className='actions';
+  if(G.choosing&&G.choosing.p===p){
+    a.className='actions choose';
+    a.innerHTML='<div class="ztitle">어떤 모양으로 바꿀까?</div><div class="suitpick"></div>';
+    for(const k of 'SHDC'){
+      const b=document.createElement('button');b.textContent=SUITS[k].sym;if(SUITS[k].red)b.className='red';
+      b.addEventListener('click',()=>{const r=G.choosing.res;G.choosing=null;r(k);});
+      a.querySelector('.suitpick').appendChild(b);
+    }
+    z.appendChild(a);ov.forEach(o=>z.appendChild(o));return;
+  }
   const dr=document.createElement('button');dr.className='btn';
   dr.textContent=G.pending>0?`${G.pending}장 가져가기`:'1장 가져가기';
   dr.disabled=!mine;dr.addEventListener('click',()=>onDraw(p));
@@ -323,7 +336,7 @@ function renderZone(p){
   ov.forEach(o=>z.appendChild(o));
 }
 function hintText(p){
-  if(G.pending>0)return `공격 받는 중! 2나 🪢로 막거나 ${G.pending}장 가져가요`;
+  if(G.pending>0)return `공격 받는 중! 2, A, 🪢로 막거나 ${G.pending}장 가져가요`;
   if(G.sel.size===0)return '카드를 눌러 고르고, 한 번 더 누르면 바로 내요';
   if(G.sel.size<3)return G.sel.size===2?'2장은 같이 못 내요. 콤보는 3장부터!':'한 번 더 누르거나 [내기]를 눌러요';
   return meldOrder(G.hands[p].filter(c=>G.sel.has(c.id)))?'훌라 콤보 완성! [내기]를 눌러요':'콤보가 아니에요 (같은 숫자 3장, 또는 같은 모양 이어진 숫자)';
@@ -360,7 +373,7 @@ function onPlay(p){
   if(busy||G.turn!==p)return;
   const cards=G.hands[p].filter(c=>G.sel.has(c.id));
   if(cards.length===1){
-    if(!canPlay(cards[0]))return reject(p,G.pending>0?'공격 받을 땐 2나 🪢만 낼 수 있어요':'모양이나 숫자가 같아야 해요');
+    if(!canPlay(cards[0]))return reject(p,G.pending>0?'공격 받을 땐 2, A, 🪢만 낼 수 있어요':'모양이나 숫자가 같아야 해요');
     doPlay(p,cards,false);
   }else if(cards.length===2){
     reject(p,'2장은 같이 낼 수 없어요. 콤보는 3장부터!');
@@ -389,12 +402,12 @@ async function doPlay(p,cards,combo){
     status('줄넘기 대결!');await wait(600);
     const loser=await duel(penalty);
     if(loser===null)status('무승부! 아무도 안 가져가요');
-    else{drawCards(loser,penalty);status(`${S.names[loser]} 줄에 걸려서 ${penalty}장 가져가요`);}
+    else{drawCards(loser,penalty);next=1-loser;status(`${S.names[loser]} 줄에 걸려서 ${penalty}장! ${S.names[next]} 먼저 내요`);}
     render();await wait(900);
-  }else if(t.r===2){G.pending+=2;status(`공격! ${you}에게 +${G.pending}`);await wait(700);}
-  else if(t.r===11){next=p;status(`${me} 한 번 더!`);await wait(700);}
+  }else if(t.r===2||t.r===1){G.pending+=t.r===2?2:(t.s==='S'?4:3);status(`공격! ${you}에게 +${G.pending}`);await wait(700);}
+  else if(t.r===11||t.r===13){next=p;status(`${me} 한 번 더!`);await wait(700);}
   else if(t.r===7){
-    const s=await chooseSuit(p);G.suit=s;sfx.play();
+    status(`${me} 모양을 골라요`);const s=await chooseSuit(p);G.suit=s;sfx.play();
     status(`이제 ${SUITS[s].sym} 모양을 내요`);render();await wait(500);
   }else status(`${you} 차례`);
   if(G.hands[p].length===1)await oneCardRace(p);
@@ -410,17 +423,7 @@ function onDraw(p){
 
 /* ---------- 7: choose suit ---------- */
 function chooseSuit(p){
-  return new Promise(res=>{
-    const z=$('#z'+p);
-    const o=document.createElement('div');o.className='zover';
-    o.innerHTML='<div><div class="ztitle">어떤 모양으로 바꿀까?</div><div class="suitpick"></div></div>';
-    for(const k of 'SHDC'){
-      const b=document.createElement('button');b.textContent=SUITS[k].sym;if(SUITS[k].red)b.className='red';
-      b.addEventListener('click',()=>{o.remove();res(k);});
-      o.querySelector('.suitpick').appendChild(b);
-    }
-    z.appendChild(o);
-  });
+  return new Promise(res=>{G.choosing={p,res};renderZone(p);});
 }
 
 /* ---------- One Card race ---------- */
