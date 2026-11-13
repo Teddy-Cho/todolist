@@ -37,7 +37,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 #app{height:100%;display:grid;grid-template-rows:1fr auto 1fr;gap:6px;padding-block:8px}
 
 /* ---------- player zones ---------- */
-.zone{position:relative;display:grid;grid-template-rows:auto 1fr auto;gap:6px;border-radius:22px;padding:10px 14px;
+.zone{position:relative;isolation:isolate;display:grid;grid-template-rows:auto 1fr auto;gap:6px;border-radius:22px;padding:10px 14px;
   background:var(--mat2);border:3px solid transparent;transition:border-color .25s, box-shadow .25s;min-height:0}
 .zone[data-p="1"]{transform:rotate(180deg)}
 .zone.turn[data-p="0"]{border-color:var(--dad);box-shadow:0 0 0 4px rgba(255,138,61,.18)}
@@ -105,6 +105,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .bigbtn.p0{background:var(--dad)} .bigbtn.p1{background:var(--son)}
 #ropecv{width:100%;height:100%;display:block}
 .duelmid{min-height:0;height:46vh}
+.jrule{font-family:var(--display);font-size:clamp(17px,2.6vh,24px);color:var(--gold)}
+.full .half{gap:6px}
 
 /* ---------- start screen ---------- */
 #start{position:fixed;inset:0;z-index:30;overflow:auto;background:var(--mat);
@@ -162,7 +164,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="rule"><div class="ic red">2 A</div><div><b>공격!</b> 2는 +2장, A는 +3장, <b>♠A는 +4장.</b> 상대는 2나 A를 내서 막고 공격을 넘기거나, 쌓인 만큼 카드를 가져가요.</div></div>
       <div class="rule"><div class="ic">♣ 7</div><div><b>모양 바꾸기.</b> 다음에 낼 모양을 내 맘대로 정해요.</div></div>
       <div class="rule"><div class="ic red">J K</div><div><b>한 번 더!</b> J나 K를 내면 내 차례가 한 번 더 와요.</div></div>
-      <div class="rule"><div class="ic">🪢</div><div><b>줄넘기 대결!</b> 아무 때나 낼 수 있어요. 줄이 바닥에 올 때 <b>점프!</b>를 눌러요. 먼저 걸린 사람이 2장 가져가고, <b>이긴 사람이 먼저</b> 카드를 내요. 공격받을 때 내면 쌓인 공격이 대결 벌칙이 돼요.</div></div>
+      <div class="rule"><div class="ic">🪢</div><div><b>줄넘기 대결!</b> 아무 때나 낼 수 있어요. 기본 줄넘기, ⚡번개, 🔴빨간 줄 조심, 🌀2단 뛰기, 💨쌩쌩이 중 하나가 랜덤으로 나와요. 먼저 걸린 사람이 2장 가져가고, <b>이긴 사람이 먼저</b> 카드를 내요. 공격받을 때 내면 쌓인 공격이 대결 벌칙이 돼요.</div></div>
       <div class="rule"><div class="ic">7 7 7</div><div><b>훌라 콤보.</b> 같은 숫자 3장, 또는 같은 모양으로 이어진 숫자 3장(예: ♥3 ♥4 ♥5)은 바닥과 상관없이 한꺼번에 낼 수 있어요. (공격받을 때는 안 돼요)</div></div>
       <div class="rule"><div class="ic">1장!</div><div><b>원카드!</b> 카드가 1장 남으면 버튼이 떠요. 내가 먼저 누르면 성공, 상대가 먼저 누르면 1장 벌칙!</div></div>
     </div>
@@ -402,7 +404,7 @@ async function doPlay(p,cards,combo){
     status('줄넘기 대결!');await wait(600);
     const loser=await duel(penalty);
     if(loser===null)status('무승부! 아무도 안 가져가요');
-    else{drawCards(loser,penalty);next=1-loser;status(`${S.names[loser]} 줄에 걸려서 ${penalty}장! ${S.names[next]} 먼저 내요`);}
+    else{drawCards(loser,penalty);next=1-loser;status(`${S.names[loser]} 대결에서 져서 ${penalty}장! ${S.names[next]} 먼저 내요`);}
     render();await wait(900);
   }else if(t.r===2||t.r===1){G.pending+=t.r===2?2:(t.s==='S'?4:3);status(`공격! ${you}에게 +${G.pending}`);await wait(700);}
   else if(t.r===11||t.r===13){next=p;status(`${me} 한 번 더!`);await wait(700);}
@@ -454,94 +456,140 @@ function oneCardRace(p){
 }
 
 /* ---------- Jump rope duel ---------- */
+const MODES=[
+  {id:'basic',name:'🪢 기본 줄넘기',rule:'줄이 바닥에 올 때 점프! 점점 빨라져요'},
+  {id:'lightning',name:'⚡ 번개 줄넘기',rule:'줄이 빨랐다 느렸다 해요. 잘 보고 점프!'},
+  {id:'snake',name:'🔴 빨간 줄 조심',rule:'노란 줄은 점프! 빨간 줄은 머리 위로 지나가니까 가만히!'},
+  {id:'double',name:'🌀 2단 뛰기',rule:'보라색 줄은 두 번 휙휙! 일찍, 높이 점프해요'},
+  {id:'mash',name:'💨 쌩쌩이',rule:'5초 동안 점프를 많이 누른 사람이 이겨요!'},
+];
+let lastMode=null;
 function duel(penalty){
+  const pool=MODES.filter(m=>m.id!==lastMode);
+  const M=pool[Math.floor(Math.random()*pool.length)];lastMode=M.id;
   return new Promise(res=>{
     const ov=$('#fullOv');ov.hidden=false;
-    const half=i=>`<div class="half ${i===1?'top':''}"><div class="big" id="jl${i}">줄이 바닥에 올 때 점프!</div><button class="bigbtn p${i}" data-i="${i}">점프!</button></div>`;
+    const half=i=>`<div class="half ${i===1?'top':''}"><div class="big" id="jt${i}">${M.name}</div><div class="jrule" id="jl${i}">${M.rule}</div><button class="bigbtn p${i}" data-i="${i}">점프!</button></div>`;
     ov.innerHTML=half(1)+'<div class="duelmid"><canvas id="ropecv"></canvas></div>'+half(0);
     const cv=$('#ropecv'),ctx=cv.getContext('2d');
     const dpr=window.devicePixelRatio||1;
     const fit=()=>{const r=cv.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;};
     fit();
     const t0=performance.now();
-    const R={period:1500,start:t0+3000,nextLow:0,js:[-1e9,-1e9],jd:[400,400],fail:[false,false],count:[0,0],over:false,endAt:0,result:undefined,last3:3};
+    const base={basic:1500,lightning:1300,snake:1300,double:1400,mash:260}[M.id];
+    const R={period:base,start:t0+4500,nextLow:0,js:[-1e9,-1e9],jd:[400,400],fail:[false,false],count:[0,0],
+      over:false,endAt:0,result:undefined,lastN:0,kind:'normal',dblLeft:0,head:[false,false]};
     R.nextLow=R.start+R.period/2;
+    R.mashEnd=R.start+5000;
     const COOL=140;
     const jump=i=>{
       const t=performance.now();
       if(R.over)return;
+      if(M.id==='mash'){
+        if(t<R.start)return;
+        R.count[i]++;R.js[i]=t;R.jd[i]=160;beep(700+R.count[i]*6,.03,'sine',.06);return;
+      }
       if(t<R.js[i]+R.jd[i]+COOL)return;
-      R.js[i]=t;R.jd[i]=Math.min(470,Math.max(300,R.period*.42));sfx.jump();
+      R.js[i]=t;
+      R.jd[i]=M.id==='double'?560:Math.min(470,Math.max(300,R.period*.42));
+      sfx.jump();
     };
     ov.querySelectorAll('.bigbtn').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();jump(+b.dataset.i);}));
-    const label=(i,txt)=>{const el=$('#jl'+i);if(el)el.textContent=txt;};
+    const setTxt=(id,txt)=>{[0,1].forEach(i=>{const el=$('#'+id+i);if(el&&el.textContent!==txt)el.textContent=txt;});};
+    const ropeColor=()=>R.kind==='red'?'255,90,74':R.kind==='dbl'?'190,130,255':'255,212,71';
 
+    // pick the kind of the next rope pass (snake / double modes)
+    function nextKind(){
+      if(M.id==='snake')R.kind=(R.count[0]>=2&&R.kind!=='red'&&Math.random()<.4)?'red':'normal';
+      if(M.id==='double'){
+        if(R.dblLeft>0){R.dblLeft--;R.kind='dbl';}
+        else R.kind=(R.count[0]>=2&&Math.random()<.4)?'dbl':'normal';
+      }
+    }
     function scene(w,h,i,theta,t){
       const floor=h-8,hy=h*.42,amp=floor-hy-2;
       const col=i===0?'#ff8a3d':'#3fbcf5';
       ctx.strokeStyle='#2f6680';ctx.lineWidth=3*dpr;ctx.beginPath();ctx.moveTo(0,floor);ctx.lineTo(w,floor);ctx.stroke();
-      const midY=hy-amp*Math.cos(theta);
+      const topY=hy-amp,lowY=R.kind==='red'?floor-h*.64:hy+amp;
+      const c=(topY+lowY)/2,a=(lowY-topY)/2;
+      const midY=c-a*Math.cos(theta);
       const front=Math.sin(theta)>0;
       const L=w*.18,Rr=w*.82;
-      const rope=()=>{ctx.strokeStyle=front?'#ffd447':'rgba(255,212,71,.45)';ctx.lineWidth=(front?6:4)*dpr;
+      const rope=()=>{ctx.strokeStyle=`rgba(${ropeColor()},${front?1:.45})`;ctx.lineWidth=(front?6:4)*dpr;
         ctx.beginPath();ctx.moveTo(L,hy);ctx.quadraticCurveTo(w/2,2*midY-hy,Rr,hy);ctx.stroke();};
-      // turners
       ctx.fillStyle='#a9c3cf';[L,Rr].forEach(x=>{ctx.beginPath();ctx.arc(x,hy,7*dpr,0,7);ctx.fill();});
       if(!front)rope();
-      // jumper
       let air=0;const dt=t-R.js[i];
-      if(dt>=0&&dt<=R.jd[i])air=Math.sin(Math.PI*dt/R.jd[i])*h*.32;
-      const s=h*.5,x=w/2,base=floor-air-2;
+      if(dt>=0&&dt<=R.jd[i])air=Math.sin(Math.PI*dt/R.jd[i])*h*(M.id==='mash'?.12:.32);
+      const s=h*.5,x=w/2,b=floor-air-2;
       ctx.strokeStyle=R.fail[i]?'#d8402f':col;ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=5*dpr;ctx.lineCap='round';
-      ctx.beginPath();ctx.arc(x,base-s*.85,s*.13,0,7);ctx.fill();
-      ctx.beginPath();ctx.moveTo(x,base-s*.72);ctx.lineTo(x,base-s*.35);
-      ctx.moveTo(x,base-s*.35);ctx.lineTo(x-s*.14,base);ctx.moveTo(x,base-s*.35);ctx.lineTo(x+s*.14,base);
-      ctx.moveTo(x,base-s*.62);ctx.lineTo(x-s*.22,base-s*.45);ctx.moveTo(x,base-s*.62);ctx.lineTo(x+s*.22,base-s*.45);ctx.stroke();
+      ctx.beginPath();ctx.arc(x,b-s*.85,s*.13,0,7);ctx.fill();
+      ctx.beginPath();ctx.moveTo(x,b-s*.72);ctx.lineTo(x,b-s*.35);
+      ctx.moveTo(x,b-s*.35);ctx.lineTo(x-s*.14,b);ctx.moveTo(x,b-s*.35);ctx.lineTo(x+s*.14,b);
+      ctx.moveTo(x,b-s*.62);ctx.lineTo(x-s*.22,b-s*.45);ctx.moveTo(x,b-s*.62);ctx.lineTo(x+s*.22,b-s*.45);ctx.stroke();
       if(front)rope();
-      // count
       ctx.fillStyle='#fff8ec';ctx.font=`${Math.round(h*.3)}px Jua, sans-serif`;ctx.textAlign='left';ctx.textBaseline='top';
       ctx.fillText(R.count[i],12*dpr,10*dpr);
       ctx.font=`${Math.round(h*.13)}px Jua, sans-serif`;ctx.fillStyle=col;
       ctx.fillText(S.names[i],12*dpr,10*dpr+h*.32);
     }
+    function finish(t){
+      R.over=true;R.endAt=t;
+      if(M.id==='mash')R.result=R.count[0]===R.count[1]?null:(R.count[0]<R.count[1]?0:1);
+      else R.result=R.fail[0]&&R.fail[1]?null:(R.fail[0]?0:(R.fail[1]?1:null));
+      sfx.fail();
+    }
     function frame(){
       const t=performance.now();
-      // evaluate passes
       if(!R.over&&t>=R.start){
-        while(t>=R.nextLow&&!R.over){
+        if(M.id==='mash'){if(t>=R.mashEnd)finish(t);}
+        else while(t>=R.nextLow&&!R.over){
           const tl=R.nextLow;
           for(const i of [0,1]){
             const air=R.js[i]<=tl&&tl<=R.js[i]+R.jd[i];
-            if(air)R.count[i]++;else R.fail[i]=true;
+            if(R.kind==='red'){if(air){R.fail[i]=true;R.head[i]=true;}else R.count[i]++;}
+            else if(air)R.count[i]++;else R.fail[i]=true;
           }
-          if(R.fail[0]||R.fail[1]){
-            R.over=true;R.endAt=t;
-            R.result=R.fail[0]&&R.fail[1]?null:(R.fail[0]?0:1);
-            sfx.fail();
-          }else{
-            beep(420,.04,'sine',.06);
-            if(R.count[0]>=30){R.over=true;R.endAt=t;R.result=null;}
-            R.period=Math.max(620,R.period*.95);R.nextLow+=R.period;
+          if(R.fail[0]||R.fail[1]){finish(t);break;}
+          beep(420,.04,'sine',.06);
+          if(R.count[0]>=30){finish(t);break;}
+          const wasDbl=R.kind==='dbl'&&R.dblLeft===0&&!R.dblSecond;
+          if(M.id==='basic')R.period=Math.max(620,R.period*.95);
+          if(M.id==='lightning')R.period=650+Math.random()*850;
+          if(M.id==='snake')R.period=Math.max(800,R.period*.97);
+          if(M.id==='double'){
+            if(wasDbl){R.period=330;R.dblSecond=true;}           // second whip of the double
+            else{R.period=Math.max(1000,base*Math.pow(.97,R.count[0]));R.dblSecond=false;}
           }
+          if(!(M.id==='double'&&R.dblSecond))nextKind();
+          R.nextLow+=R.period;
         }
       }
       const W=cv.width,H=cv.height;
       ctx.clearRect(0,0,W,H);
       let theta=0;
-      if(t>=R.start)theta=Math.PI-2*Math.PI*(R.nextLow-t)/R.period;
+      if(t>=R.start){
+        theta=M.id==='mash'?Math.PI*2*(t-R.start)/R.period:Math.PI-2*Math.PI*(R.nextLow-t)/R.period;
+      }
       if(R.over)theta=Math.PI;
       ctx.save();ctx.translate(0,H/2);scene(W,H/2,0,theta,t);ctx.restore();
       ctx.save();ctx.translate(W,H/2);ctx.rotate(Math.PI);scene(W,H/2,1,theta,t);ctx.restore();
-      // labels
       if(t<R.start){
         const n=Math.ceil((R.start-t)/1000);
-        if(n!==R.last3){R.last3=n;sfx.tick();}
-        [0,1].forEach(i=>label(i,`준비… ${n}`));
-      }else if(!R.over){[0,1].forEach(i=>label(i,'줄이 바닥에 올 때 점프!'));}
-      else{
-        const txt=R.result===null?'무승부!':`${S.names[R.result]} 걸렸다! +${penalty}장`;
-        [0,1].forEach(i=>label(i,R.result===i?'앗, 걸렸다! 😵':R.result===null?'무승부!':'이겼다! 🎉'));
-        if(t-R.endAt>1600){ov.hidden=true;ov.innerHTML='';window.removeEventListener('resize',fit);res(R.result);return;}
+        if(n!==R.lastN){R.lastN=n;if(n<=3)sfx.tick();}
+        setTxt('jt',n>3?M.name:`준비… ${n}`);
+      }else if(!R.over){
+        if(M.id==='mash')setTxt('jt',`쌩쌩! 남은 시간 ${Math.ceil((R.mashEnd-t)/1000)}초`);
+        else if(R.kind==='red')setTxt('jt','🔴 빨간 줄! 가만히!');
+        else if(R.kind==='dbl')setTxt('jt','🌀 2단! 일찍 점프!');
+        else setTxt('jt','🟡 점프!');
+      }else{
+        [0,1].forEach(i=>{
+          const el=$('#jt'+i);if(!el)return;
+          el.textContent=R.result===null?'무승부!':R.result===i?(R.head[i]?'머리 꽝! 😵':M.id==='mash'?'아깝다! 😵':'앗, 걸렸다! 😵'):'이겼다! 🎉';
+        });
+        setTxt('jl',M.id==='mash'?`${S.names[0]} ${R.count[0]}번 : ${R.count[1]}번 ${S.names[1]}`:M.rule);
+        if(t-R.endAt>1800){ov.hidden=true;ov.innerHTML='';window.removeEventListener('resize',fit);res(R.result);return;}
       }
       requestAnimationFrame(frame);
     }
